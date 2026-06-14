@@ -1,65 +1,70 @@
 # Netflix Central (Lokal)
 
-Aplikasi desktop lokal untuk mengelola akun Netflix berbasis profil Chrome. Tidak ada data dikirim ke cloud. Semua sesi login tersimpan di folder profil Chrome lokal.
+Aplikasi desktop lokal untuk mengelola banyak akun Netflix berbasis profil Google Chrome yang terisolasi. Semua sesi login/cookies tersimpan secara lokal di folder profil Chrome PC masing-masing, sehingga data login tidak saling bercampur.
+
+---
 
 ## Prasyarat
-- Windows + Google Chrome terpasang (browser utama).
-- Go terpasang (untuk menjalankan backend API).
-- Node.js + npm terpasang (untuk menjalankan frontend React + Vite).
-- Git (opsional, hanya jika mau commit/push kode).
+Sebelum menjalankan aplikasi, pastikan PC Anda sudah terpasang:
+1. **Google Chrome** (sebagai browser utama).
+2. **Go (Golang)** versi 1.21 ke atas (untuk backend API).
+3. **Node.js & npm** (untuk frontend React + Vite).
+4. **PostgreSQL Database Server** (berjalan secara lokal di port default `5432`).
 
-## Cara menjalankan (2 terminal)
-1) Backend
-```
-cd D:\Cinnong's\APK\Netflix_Central
+---
+
+## Langkah Setup Database (Pertama Kali)
+
+1. Buka PostgreSQL Anda (bisa lewat pgAdmin/DBeaver/Terminal) lalu buat database kosong bernama **`netflixdb`**:
+   ```sql
+   CREATE DATABASE netflixdb;
+   ```
+2. *(Opsional)* Jika Anda memiliki database SQLite lama (`database/app.db`) dan ingin memindahkan datanya ke PostgreSQL lokal Anda, jalankan perintah migrasi ini di terminal:
+   ```powershell
+   go run scripts/migrate.go
+   ```
+   *Script ini secara otomatis membuat tabel-tabel di PostgreSQL dan menyalin data dari file `app.db`.*
+
+---
+
+## Cara Menjalankan Aplikasi
+
+Aplikasi ini membutuhkan dua terminal yang aktif secara bersamaan (satu untuk Backend, satu untuk Frontend).
+
+### 1) Menjalankan Backend (Terminal 1)
+Buka terminal di folder utama proyek `S6-NetfliksCentral` dan jalankan:
+```powershell
 go run main.go
 ```
-2) Frontend
-```
-cd D:\Cinnong's\APK\Netflix_Central\frontend
-npm install
+*   **Default PostgreSQL Credentials**: Secara default, backend akan mencoba terhubung ke PostgreSQL lokal Anda dengan username: `postgres`, password: `dina2004`, database: `netflixdb`, port: `5432`.
+*   Jika kredensial PostgreSQL Anda berbeda, Anda bisa menjalankannya lewat file batch:
+    ```powershell
+    .\run_backend.bat
+    ```
+    *(Silakan edit berkas `run_backend.bat` terlebih dahulu untuk menyesuaikan password/username database Anda).*
+
+### 2) Menjalankan Frontend (Terminal 2)
+Buka terminal baru, masuk ke dalam subfolder `frontend`, lalu jalankan:
+```powershell
+cd frontend
+npm install   # Jalankan ini hanya untuk pertama kali setup
 npm run dev
 ```
-Lalu buka alamat yang ditampilkan (biasanya http://localhost:5173).
+Setelah aktif, buka alamat yang ditampilkan di browser Anda (biasanya **`http://localhost:5173`**).
 
-## Cara pakai singkat
-- **Add Account** → isi label + email (harus unik) → profil Chrome dibuat otomatis.
-- Klik kartu (dikelompokkan per huruf email) untuk buka Chrome dengan sesi tersimpan.
-- Ikon ✏️ untuk edit, 🗑️ untuk hapus; toggle light/dark ada di header.
-- Abaikan "Sign in to Chrome"; login ke Netflix sekali, lalu sesi tersimpan.
+---
 
-## Instruksi untuk klien (frontend Netlify + backend lokal + login)
-- Backend wajib jalan di PC klien (butuh Chrome). Cara cepat: jalankan `scripts/install_backend.ps1` sekali di PowerShell (butuh Go terpasang) untuk build `netflix-central.exe` dan auto-start via Scheduled Task.
-- Pastikan backend aktif di `http://localhost:8080` (bisa cek dengan membuka di browser: harus muncul respon JSON kosong/OK).
-- Auth: pertama kali, lakukan **Register** di UI (email + password). Setelah login, token tersimpan di localStorage.
-- Buka URL Netlify yang diberikan. UI memanggil backend lokal; tanpa backend, tombol tidak berfungsi.
-- Tambah akun via **Add Account**. Klik kartu untuk membuka Chrome dengan profil yang sudah login.
+## Cara Penggunaan Singkat
+1. **Registrasi Akun Admin (Pertama Kali)**: 
+   * Jika database PostgreSQL baru dibuat, Anda wajib melakukan **Register** terlebih dahulu di halaman login UI untuk membuat akun admin aplikasi.
+2. **Menambah Akun Netflix**:
+   * Klik tombol **Add Account**, isi label nama dan email Netflix. Sistem akan membuat profil Chrome lokal terisolasi secara otomatis.
+3. **Membuka Akun Netflix**:
+   * Klik kartu akun Netflix di dashboard untuk membuka jendela Google Chrome baru yang terisolasi. 
+   * Login ke Netflix sekali, dan sesi login Anda akan aman tersimpan di PC Anda untuk seterusnya.
 
-### Cek/nyalakan ulang backend via Task Scheduler (Windows)
-1. Tekan `Win + R`, ketik `taskschd.msc`, Enter.
-2. Klik **Task Scheduler Library**, cari task **Netflix Central Backend**.
-3. Status harus **Running**. Jika tidak, klik kanan → **Run**. Jika mau restart, klik kanan → **End**, lalu **Run** lagi.
-4. Backend berjalan otomatis tiap logon setelah task terdaftar.
+---
 
-## Jalankan backend otomatis (Windows)
-- Buka PowerShell, jalankan: `./scripts/install_backend.ps1` (butuh Go terpasang). Ini build `netflix-central.exe`, daftar sebagai Scheduled Task, dan menyalakan backend di startup.
-
-## Deploy frontend di Netlify
-- Set env: `VITE_API_BASE=http://localhost:8080` (backend tetap lokal di PC pengguna).
-- Build command: `npm run build` · Publish directory: `dist`.
-- Pastikan backend berjalan di PC saat membuka situs Netlify; CORS sudah terbuka.
-
-## Lokasi data
-- Database SQLite: `database/app.db`
-- Profil Chrome per akun: `chrome_profiles/<nama-profil>` (otomatis dibuat). Jangan hapus jika ingin sesi tetap ada.
-
-## Troubleshooting
-- **Chrome minta login sync**: pilih "Don't sign in". Yang penting login Netflix/Gmail di tab, bukan sync Chrome.
-- **Sesi hilang**: profil terhapus/berpindah atau logout oleh layanan. Buka akun lagi, login manual sekali, sesi akan tersimpan ulang.
-- **Chrome tidak terbuka**: pastikan Chrome terpasang. Path dicari otomatis di Program Files/LocalAppData; jika berbeda, instal Chrome atau sesuaikan layanan peluncur.
-- **File profil terkunci saat git**: folder `chrome_profiles/` sudah di-ignore. Pastikan Chrome ditutup saat commit bila perlu.
-
-## Keamanan & batasan
-- Tidak menyimpan password di app. Login hanya di Chrome.
-- Tidak ada cloud/remote access. Semua lokal di PC.
-- Tidak memakai auto-login, scraping, atau headless browser.
+## Lokasi Penyimpanan Data Sesi
+* **Database**: PostgreSQL (`netflixdb`).
+* **Sesi Login Chrome**: Disimpan di folder lokal `chrome_profiles/<nama-profil>`. Folder ini tidak akan ikut ter-upload ke Git/GitHub demi alasan keamanan dan performa.
