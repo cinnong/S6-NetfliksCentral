@@ -69,25 +69,20 @@ func CreateAccount(ctx context.Context, db *sql.DB, userID int64, label, email, 
 	profileName := generateProfileName(label, email)
 	createdAt := time.Now().UTC().Format(time.RFC3339Nano)
 
-	result, err := tx.ExecContext(
+	var accountID int64
+	err = tx.QueryRowContext(
 		ctx,
-		`INSERT INTO accounts (user_id, label, netflix_email, status, chrome_profile, created_at) VALUES ($1, $2, $3, $4, $5, $6);`,
+		`INSERT INTO accounts (user_id, label, netflix_email, status, chrome_profile, created_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;`,
 		userID,
 		label,
 		email,
 		status,
 		profileName,
 		createdAt,
-	)
+	).Scan(&accountID)
 	if err != nil {
 		tx.Rollback()
 		return models.Account{}, fmt.Errorf("insert account: %w", err)
-	}
-
-	accountID, err := result.LastInsertId()
-	if err != nil {
-		tx.Rollback()
-		return models.Account{}, fmt.Errorf("get account id: %w", err)
 	}
 
 	if err := InsertDefaultTabs(ctx, tx, accountID); err != nil {

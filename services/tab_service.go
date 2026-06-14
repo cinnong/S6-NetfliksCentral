@@ -73,23 +73,18 @@ func CreateTab(ctx context.Context, db *sql.DB, accountID int64, title, url stri
 		return tab, fmt.Errorf("get next position: %w", err)
 	}
 
-	result, err := tx.ExecContext(
+	var id int64
+	err = tx.QueryRowContext(
 		ctx,
-		`INSERT INTO tabs (account_id, title, url, position) VALUES ($1, $2, $3, $4);`,
+		`INSERT INTO tabs (account_id, title, url, position) VALUES ($1, $2, $3, $4) RETURNING id;`,
 		accountID,
 		title,
 		url,
 		nextPos.Int64,
-	)
+	).Scan(&id)
 	if err != nil {
 		tx.Rollback()
 		return tab, fmt.Errorf("insert tab: %w", err)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		tx.Rollback()
-		return tab, fmt.Errorf("get tab id: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {

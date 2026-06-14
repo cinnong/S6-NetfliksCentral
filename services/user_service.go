@@ -23,12 +23,11 @@ func CreateUser(email, password string) (*models.User, error) {
 		return nil, err
 	}
 
-	res, err := db.Exec("INSERT INTO users (email, password_hash) VALUES ($1, $2)", email, string(hash))
+	var id int64
+	err = db.QueryRow("INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id", email, string(hash)).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
-
-	id, _ := res.LastInsertId()
 	return &models.User{ID: id, Email: email, PasswordHash: string(hash)}, nil
 }
 
